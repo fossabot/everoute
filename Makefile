@@ -13,6 +13,9 @@ image:
 image-generate:
 	docker buildx build -f build/images/generate/Dockerfile -t everoute/generate ./build/images/generate/
 
+image-e2e:
+	docker buildx build -f build/images/e2e/Dockerfile -t everoute/e2e . --load
+
 yaml:
 	find deploy -name "*.yaml" | grep -v ^deploy/everoute.yaml$ | sort -u | xargs cat | cat > deploy/everoute.yaml
 

@@ -24,6 +24,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
 	github.com/pkg/errors v0.9.1
+	github.com/slack-go/slack v0.10.1
 	github.com/spf13/cobra v1.1.1
 	github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
 	github.com/vektah/gqlparser/v2 v2.1.0

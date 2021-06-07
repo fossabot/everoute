@@ -1,0 +1,173 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lynx-log-exporter-svc
+  namespace: lynx-e2e-runner
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: lynx-log-exporter
+  sessionAffinity: None
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lynx-log-exporter
+  name: lynx-log-exporter
+  namespace: lynx-e2e-runner
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: lynx-log-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: lynx-log-exporter
+    spec:
+      containers:
+        - image: nginx
+          imagePullPolicy: IfNotPresent
+          name: container-40deqr
+          ports:
+            - containerPort: 80
+              name: tcp-80
+              protocol: TCP
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data/e2e-log/
+              name: volume-00wtcp
+              readOnly: true
+            - mountPath: /etc/nginx/nginx.conf
+              name: volume-bzkf9x
+              readOnly: true
+              subPath: nginx.conf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: volume-00wtcp
+          persistentVolumeClaim:
+            claimName: e2e-runner-log-data
+        - configMap:
+            defaultMode: 420
+            name: e2e-exporter
+          name: volume-bzkf9x
+
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    app: lynx-e2e-runner
+  name: lynx-e2e-runner
+  namespace: lynx-e2e-runner
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      labels:
+        app: lynx-e2e-runner
+    spec:
+      backoffLimit: 5
+      completions: 1
+      parallelism: 1
+      template:
+        spec:
+          hostAliases:
+            - ip: "192.168.31.191"
+              hostnames:
+                - "zwtop.gitops-cloudtower.smartx.com"
+          containers:
+            - args:
+                - --hook-url=""
+                - --expose-url=""
+              image: docker-registry-1623049919.docker-registry.svc:5000/library/lynx-e2e-runner:1.0
+              imagePullPolicy: IfNotPresent
+              name: container-97tnzu
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+                - mountPath: /mnt/e2e-log
+                  name: volume-i2iq3g
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+            - name: volume-i2iq3g
+              persistentVolumeClaim:
+                claimName: e2e-runner-log-data
+  schedule: 0 0 * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+
+---
+apiVersion: v1
+data:
+  nginx.conf: |
+    user  nginx;
+      worker_processes  auto;
+
+      error_log  /var/log/nginx/error.log notice;
+      pid        /var/run/nginx.pid;
+
+
+      events {
+      worker_connections  1024;
+    }
+
+    http {
+      server {
+      listen       80;
+      listen  [::]:80;
+      server_name  localhost;
+
+        location /e2e-log {
+          alias /data/e2e-log/;
+          autoindex on;
+          autoindex_exact_size off;
+          autoindex_localtime on;
+        }
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: e2e-exporter
+  namespace: lynx-e2e-runner
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: e2e-runner-log-data
+  namespace: lynx-e2e-runner
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local
+  volumeMode: Filesystem
