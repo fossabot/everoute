@@ -41,7 +41,6 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
-	VM() VMResolver
 }
 
 type DirectiveRoot struct {
@@ -50,6 +49,7 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	EverouteCluster struct {
 		AgentELFClusters    func(childComplexity int) int
+		AgentELFVDSes       func(childComplexity int) int
 		ControllerInstances func(childComplexity int) int
 		GlobalDefaultAction func(childComplexity int) int
 		GlobalWhitelist     func(childComplexity int) int
@@ -73,12 +73,9 @@ type ComplexityRoot struct {
 	}
 
 	Host struct {
-		Cluster      func(childComplexity int) int
-		DataIP       func(childComplexity int) int
-		ID           func(childComplexity int) int
-		ManagementIP func(childComplexity int) int
-		Name         func(childComplexity int) int
-		Nics         func(childComplexity int) int
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
+		Nics func(childComplexity int) int
 	}
 
 	HostEvent struct {
@@ -148,6 +145,7 @@ type ComplexityRoot struct {
 
 	Nic struct {
 		ID         func(childComplexity int) int
+		IPAddress  func(childComplexity int) int
 		MacAddress func(childComplexity int) int
 		Name       func(childComplexity int) int
 		Physical   func(childComplexity int) int
@@ -204,7 +202,6 @@ type ComplexityRoot struct {
 
 	VM struct {
 		Description func(childComplexity int) int
-		Host        func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Memory      func(childComplexity int) int
 		Name        func(childComplexity int) int
@@ -222,6 +219,7 @@ type ComplexityRoot struct {
 	VMNic struct {
 		Enabled     func(childComplexity int) int
 		ID          func(childComplexity int) int
+		IPAddress   func(childComplexity int) int
 		InterfaceID func(childComplexity int) int
 		MacAddress  func(childComplexity int) int
 		Mirror      func(childComplexity int) int
@@ -233,6 +231,7 @@ type ComplexityRoot struct {
 		ID     func(childComplexity int) int
 		Name   func(childComplexity int) int
 		Type   func(childComplexity int) int
+		VDS    func(childComplexity int) int
 		VlanID func(childComplexity int) int
 	}
 }
@@ -261,9 +260,6 @@ type SubscriptionResolver interface {
 	Host(ctx context.Context) (<-chan *model.HostEvent, error)
 	SystemEndpoints(ctx context.Context) (<-chan *schema.SystemEndpoints, error)
 }
-type VMResolver interface {
-	Host(ctx context.Context, obj *schema.VM) (*schema.Host, error)
-}
 
 type executableSchema struct {
 	resolvers  ResolverRoot
@@ -286,6 +282,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.EverouteCluster.AgentELFClusters(childComplexity), true
+
+	case "EverouteCluster.agent_elf_vdses":
+		if e.complexity.EverouteCluster.AgentELFVDSes == nil {
+			break
+		}
+
+		return e.complexity.EverouteCluster.AgentELFVDSes(childComplexity), true
 
 	case "EverouteCluster.controller_instances":
 		if e.complexity.EverouteCluster.ControllerInstances == nil {
@@ -364,33 +367,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.EverouteControllerInstance.IPAddr(childComplexity), true
 
-	case "Host.cluster":
-		if e.complexity.Host.Cluster == nil {
-			break
-		}
-
-		return e.complexity.Host.Cluster(childComplexity), true
-
-	case "Host.data_ip":
-		if e.complexity.Host.DataIP == nil {
-			break
-		}
-
-		return e.complexity.Host.DataIP(childComplexity), true
-
 	case "Host.id":
 		if e.complexity.Host.ID == nil {
 			break
 		}
 
 		return e.complexity.Host.ID(childComplexity), true
-
-	case "Host.management_ip":
-		if e.complexity.Host.ManagementIP == nil {
-			break
-		}
-
-		return e.complexity.Host.ManagementIP(childComplexity), true
 
 	case "Host.name":
 		if e.complexity.Host.Name == nil {
@@ -642,6 +624,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Nic.ID(childComplexity), true
 
+	case "Nic.ip_address":
+		if e.complexity.Nic.IPAddress == nil {
+			break
+		}
+
+		return e.complexity.Nic.IPAddress(childComplexity), true
+
 	case "Nic.mac_address":
 		if e.complexity.Nic.MacAddress == nil {
 			break
@@ -866,13 +855,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.VM.Description(childComplexity), true
 
-	case "VM.host":
-		if e.complexity.VM.Host == nil {
-			break
-		}
-
-		return e.complexity.VM.Host(childComplexity), true
-
 	case "VM.id":
 		if e.complexity.VM.ID == nil {
 			break
@@ -950,6 +932,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.VMNic.ID(childComplexity), true
 
+	case "VMNic.ip_address":
+		if e.complexity.VMNic.IPAddress == nil {
+			break
+		}
+
+		return e.complexity.VMNic.IPAddress(childComplexity), true
+
 	case "VMNic.interface_id":
 		if e.complexity.VMNic.InterfaceID == nil {
 			break
@@ -1005,6 +994,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Vlan.Type(childComplexity), true
+
+	case "Vlan.vds":
+		if e.complexity.Vlan.VDS == nil {
+			break
+		}
+
+		return e.complexity.Vlan.VDS(childComplexity), true
 
 	case "Vlan.vlan_id":
 		if e.complexity.Vlan.VlanID == nil {
@@ -1256,7 +1252,6 @@ type IPPortSystemEndpoint {
     description: String!
     vcpu: Int!
     memory: Float!
-    host: Host!
     vm_nics: [VMNic!]
     status: VMStatus!
 }
@@ -1276,6 +1271,7 @@ type VMNic {
     mirror: Boolean
     model: VMNicModel
     mac_address: String
+    ip_address: String
     interface_id: String
 }
 
@@ -1286,6 +1282,7 @@ enum VMNicModel {
 
 type Vlan {
     id: ID!
+    vds: ObjectReference!
     name: String!
     vlan_id: Int!
     type: NetworkType!
@@ -1309,6 +1306,7 @@ type Label {
 type EverouteCluster {
     id: ID!
     agent_elf_clusters: [ObjectReference!]
+    agent_elf_vdses: [ObjectReference!]
     controller_instances: [EverouteControllerInstance!]!
     global_default_action: GlobalPolicyAction!
     global_whitelist: EverouteClusterWhitelist
@@ -1333,9 +1331,6 @@ type Host {
     id: ID!
     name: String!
     nics: [Nic!]
-    cluster: ObjectReference!
-    management_ip: String!
-    data_ip: String
 }
 
 type Nic {
@@ -1343,6 +1338,7 @@ type Nic {
     physical: Boolean!
     name: String!
     mac_address: String!
+    ip_address: String
 }
 `, BuiltIn: false},
 }
@@ -1474,6 +1470,38 @@ func (ec *executionContext) _EverouteCluster_agent_elf_clusters(ctx context.Cont
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.AgentELFClusters, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]schema.ObjectReference)
+	fc.Result = res
+	return ec.marshalOObjectReference2ᚕgithubᚗcomᚋeverouteᚋeverouteᚋpluginᚋtowerᚋpkgᚋschemaᚐObjectReferenceᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _EverouteCluster_agent_elf_vdses(ctx context.Context, field graphql.CollectedField, obj *schema.EverouteCluster) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "EverouteCluster",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AgentELFVDSes, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1925,108 +1953,6 @@ func (ec *executionContext) _Host_nics(ctx context.Context, field graphql.Collec
 	res := resTmp.([]schema.Nic)
 	fc.Result = res
 	return ec.marshalONic2ᚕgithubᚗcomᚋeverouteᚋeverouteᚋpluginᚋtowerᚋpkgᚋschemaᚐNicᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Host_cluster(ctx context.Context, field graphql.CollectedField, obj *schema.Host) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Host",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Cluster, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(schema.ObjectReference)
-	fc.Result = res
-	return ec.marshalNObjectReference2githubᚗcomᚋeverouteᚋeverouteᚋpluginᚋtowerᚋpkgᚋschemaᚐObjectReference(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Host_management_ip(ctx context.Context, field graphql.CollectedField, obj *schema.Host) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Host",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ManagementIP, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Host_data_ip(ctx context.Context, field graphql.CollectedField, obj *schema.Host) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Host",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.DataIP, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _HostEvent_mutation(ctx context.Context, field graphql.CollectedField, obj *model.HostEvent) (ret graphql.Marshaler) {
@@ -3258,6 +3184,38 @@ func (ec *executionContext) _Nic_mac_address(ctx context.Context, field graphql.
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Nic_ip_address(ctx context.Context, field graphql.CollectedField, obj *schema.Nic) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Nic",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IPAddress, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ObjectReference_id(ctx context.Context, field graphql.CollectedField, obj *schema.ObjectReference) (ret graphql.Marshaler) {
@@ -4538,41 +4496,6 @@ func (ec *executionContext) _VM_memory(ctx context.Context, field graphql.Collec
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _VM_host(ctx context.Context, field graphql.CollectedField, obj *schema.VM) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "VM",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.VM().Host(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*schema.Host)
-	fc.Result = res
-	return ec.marshalNHost2ᚖgithubᚗcomᚋeverouteᚋeverouteᚋpluginᚋtowerᚋpkgᚋschemaᚐHost(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _VM_vm_nics(ctx context.Context, field graphql.CollectedField, obj *schema.VM) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -4937,6 +4860,38 @@ func (ec *executionContext) _VMNic_mac_address(ctx context.Context, field graphq
 	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _VMNic_ip_address(ctx context.Context, field graphql.CollectedField, obj *schema.VMNic) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "VMNic",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IPAddress, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _VMNic_interface_id(ctx context.Context, field graphql.CollectedField, obj *schema.VMNic) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -5002,6 +4957,41 @@ func (ec *executionContext) _Vlan_id(ctx context.Context, field graphql.Collecte
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Vlan_vds(ctx context.Context, field graphql.CollectedField, obj *schema.Vlan) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Vlan",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VDS, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(schema.ObjectReference)
+	fc.Result = res
+	return ec.marshalNObjectReference2githubᚗcomᚋeverouteᚋeverouteᚋpluginᚋtowerᚋpkgᚋschemaᚐObjectReference(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Vlan_name(ctx context.Context, field graphql.CollectedField, obj *schema.Vlan) (ret graphql.Marshaler) {
@@ -6258,6 +6248,8 @@ func (ec *executionContext) _EverouteCluster(ctx context.Context, sel ast.Select
 			}
 		case "agent_elf_clusters":
 			out.Values[i] = ec._EverouteCluster_agent_elf_clusters(ctx, field, obj)
+		case "agent_elf_vdses":
+			out.Values[i] = ec._EverouteCluster_agent_elf_vdses(ctx, field, obj)
 		case "controller_instances":
 			out.Values[i] = ec._EverouteCluster_controller_instances(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -6396,18 +6388,6 @@ func (ec *executionContext) _Host(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "nics":
 			out.Values[i] = ec._Host_nics(ctx, field, obj)
-		case "cluster":
-			out.Values[i] = ec._Host_cluster(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "management_ip":
-			out.Values[i] = ec._Host_management_ip(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "data_ip":
-			out.Values[i] = ec._Host_data_ip(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6829,6 +6809,8 @@ func (ec *executionContext) _Nic(ctx context.Context, sel ast.SelectionSet, obj 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "ip_address":
+			out.Values[i] = ec._Nic_ip_address(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7176,48 +7158,34 @@ func (ec *executionContext) _VM(ctx context.Context, sel ast.SelectionSet, obj *
 		case "id":
 			out.Values[i] = ec._VM_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "name":
 			out.Values[i] = ec._VM_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "description":
 			out.Values[i] = ec._VM_description(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "vcpu":
 			out.Values[i] = ec._VM_vcpu(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "memory":
 			out.Values[i] = ec._VM_memory(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
-		case "host":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._VM_host(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
 		case "vm_nics":
 			out.Values[i] = ec._VM_vm_nics(ctx, field, obj)
 		case "status":
 			out.Values[i] = ec._VM_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -7290,6 +7258,8 @@ func (ec *executionContext) _VMNic(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._VMNic_model(ctx, field, obj)
 		case "mac_address":
 			out.Values[i] = ec._VMNic_mac_address(ctx, field, obj)
+		case "ip_address":
+			out.Values[i] = ec._VMNic_ip_address(ctx, field, obj)
 		case "interface_id":
 			out.Values[i] = ec._VMNic_interface_id(ctx, field, obj)
 		default:
@@ -7316,6 +7286,11 @@ func (ec *executionContext) _Vlan(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("Vlan")
 		case "id":
 			out.Values[i] = ec._Vlan_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "vds":
+			out.Values[i] = ec._Vlan_vds(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

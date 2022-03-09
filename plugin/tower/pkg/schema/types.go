@@ -19,13 +19,12 @@ package schema
 type VM struct {
 	ObjectMeta
 
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	Vcpu        int             `json:"vcpu,omitempty"`
-	Memory      float64         `json:"memory,omitempty"`
-	Host        ObjectReference `json:"host,omitempty"`
-	Status      VMStatus        `json:"status"`
-	VMNics      []VMNic         `json:"vm_nics,omitempty"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Vcpu        int      `json:"vcpu,omitempty"`
+	Memory      float64  `json:"memory,omitempty"`
+	Status      VMStatus `json:"status"`
+	VMNics      []VMNic  `json:"vm_nics,omitempty"`
 }
 
 // VMStatus is enumeration of vm status
@@ -47,6 +46,7 @@ type VMNic struct {
 	Mirror      bool       `json:"mirror,omitempty"`
 	Model       VMNicModel `json:"model,omitempty"`
 	MacAddress  string     `json:"mac_address,omitempty"`
+	IPAddress   string     `json:"ip_address,omitempty"`
 	InterfaceID string     `json:"interface_id,omitempty"`
 }
 
@@ -61,9 +61,10 @@ const (
 type Vlan struct {
 	ObjectMeta
 
-	Name   string      `json:"name,omitempty"`
-	VlanID int         `json:"vlan_id"`
-	Type   NetworkType `json:"type,omitempty"`
+	VDS    ObjectReference `json:"vds"`
+	Name   string          `json:"name,omitempty"`
+	VlanID int             `json:"vlan_id"`
+	Type   NetworkType     `json:"type,omitempty"`
 }
 
 // NetworkType is enumeration of network types
@@ -100,6 +101,7 @@ type EverouteCluster struct {
 	ObjectMeta
 
 	AgentELFClusters    []ObjectReference            `json:"agent_elf_clusters"`
+	AgentELFVDSes       []ObjectReference            `json:"agent_elf_vdses,omitempty"`
 	ControllerInstances []EverouteControllerInstance `json:"controller_instances"`
 	GlobalDefaultAction GlobalPolicyAction           `json:"global_default_action"`
 	GlobalWhitelist     EverouteClusterWhitelist     `json:"global_whitelist,omitempty"`
@@ -126,11 +128,8 @@ const (
 type Host struct {
 	ObjectMeta
 
-	Name         string          `json:"name,omitempty"`
-	Nics         []Nic           `json:"nics,omitempty"`
-	ManagementIP string          `json:"management_ip"`
-	DataIP       string          `json:"data_ip,omitempty"`
-	Cluster      ObjectReference `json:"cluster"`
+	Name string `json:"name,omitempty"`
+	Nics []Nic  `json:"nics,omitempty"`
 }
 
 type Nic struct {
@@ -139,4 +138,5 @@ type Nic struct {
 	Physical   bool   `json:"physical"`
 	Name       string `json:"name,omitempty"`
 	MacAddress string `json:"mac_address,omitempty"`
+	IPAddress  string `json:"ip_address,omitempty"`
 }
